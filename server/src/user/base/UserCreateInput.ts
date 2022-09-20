@@ -42,14 +42,6 @@ class UserCreateInput {
   })
   @IsString()
   @Field(() => String)
-  username!: string;
-
-  @ApiProperty({
-    required: true,
-    type: String,
-  })
-  @IsString()
-  @Field(() => String)
   password!: string;
 
   @ApiProperty({
@@ -63,14 +55,11 @@ class UserCreateInput {
   roles!: Array<string>;
 
   @ApiProperty({
-    required: false,
+    required: true,
     type: String,
   })
   @IsString()
-  @IsOptional()
-  @Field(() => String, {
-    nullable: true,
-  })
-  matan?: string | null;
+  @Field(() => String)
+  username!: string;
 }
 export { UserCreateInput };

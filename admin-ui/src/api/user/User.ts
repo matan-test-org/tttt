@@ -1,10 +1,9 @@
 export type User = {
-  id: string;
   createdAt: Date;
-  updatedAt: Date;
   firstName: string | null;
+  id: string;
   lastName: string | null;
-  username: string;
   roles: Array<string>;
-  matan: string | null;
+  updatedAt: Date;
+  username: string;
 };
