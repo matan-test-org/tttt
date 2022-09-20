@@ -11,64 +11,40 @@ https://docs.amplication.com/docs/how-to/custom-code
   */
 import * as common from "@nestjs/common";
 import * as swagger from "@nestjs/swagger";
-import * as nestMorgan from "nest-morgan";
 import * as nestAccessControl from "nest-access-control";
 import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
-import * as abacUtil from "../../auth/abac.util";
 import { isRecordNotFoundError } from "../../prisma.util";
 import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
 import { UserService } from "../user.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { UserCreateInput } from "./UserCreateInput";
 import { UserWhereInput } from "./UserWhereInput";
 import { UserWhereUniqueInput } from "./UserWhereUniqueInput";
 import { UserFindManyArgs } from "./UserFindManyArgs";
 import { UserUpdateInput } from "./UserUpdateInput";
 import { User } from "./User";
-@swagger.ApiBasicAuth()
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class UserControllerBase {
   constructor(
     protected readonly service: UserService,
     protected readonly rolesBuilder: nestAccessControl.RolesBuilder
   ) {}
 
-  @common.UseInterceptors(nestMorgan.MorganInterceptor("combined"))
-  @common.UseGuards(
-    defaultAuthGuard.DefaultAuthGuard,
-    nestAccessControl.ACGuard
-  )
-  @common.Post()
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @nestAccessControl.UseRoles({
     resource: "User",
     action: "create",
     possession: "any",
   })
+  @common.Post()
   @swagger.ApiCreatedResponse({ type: User })
   @swagger.ApiForbiddenResponse({ type: errors.ForbiddenException })
-  async create(
-    @common.Body() data: UserCreateInput,
-    @nestAccessControl.UserRoles() userRoles: string[]
-  ): Promise<User> {
-    const permission = this.rolesBuilder.permission({
-      role: userRoles,
-      action: "create",
-      possession: "any",
-      resource: "User",
-    });
-    const invalidAttributes = abacUtil.getInvalidAttributes(permission, data);
-    if (invalidAttributes.length) {
-      const properties = invalidAttributes
-        .map((attribute: string) => JSON.stringify(attribute))
-        .join(", ");
-      const roles = userRoles
-        .map((role: string) => JSON.stringify(role))
-        .join(",");
-      throw new errors.ForbiddenException(
-        `providing the properties: ${properties} on ${"User"} creation is forbidden for roles: ${roles}`
-      );
-    }
+  async create(@common.Body() data: UserCreateInput): Promise<User> {
     return await this.service.create({
       data: data,
       select: {
@@ -79,37 +55,24 @@ export class UserControllerBase {
         lastName: true,
         username: true,
         roles: true,
+        matan: true,
       },
     });
   }
 
-  @common.UseInterceptors(nestMorgan.MorganInterceptor("combined"))
-  @common.UseGuards(
-    defaultAuthGuard.DefaultAuthGuard,
-    nestAccessControl.ACGuard
-  )
-  @common.Get()
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @nestAccessControl.UseRoles({
     resource: "User",
     action: "read",
     possession: "any",
   })
+  @common.Get()
   @swagger.ApiOkResponse({ type: [User] })
   @swagger.ApiForbiddenResponse()
   @ApiNestedQuery(UserFindManyArgs)
-  async findMany(
-    @common.Req() request: Request,
-    @nestAccessControl.UserRoles() userRoles: string[]
-  ): Promise<User[]> {
+  async findMany(@common.Req() request: Request): Promise<User[]> {
     const args = plainToClass(UserFindManyArgs, request.query);
-
-    const permission = this.rolesBuilder.permission({
-      role: userRoles,
-      action: "read",
-      possession: "any",
-      resource: "User",
-    });
-    const results = await this.service.findMany({
+    return this.service.findMany({
       ...args,
       select: {
         id: true,
@@ -119,35 +82,24 @@ export class UserControllerBase {
         lastName: true,
         username: true,
         roles: true,
+        matan: true,
       },
     });
-    return results.map((result) => permission.filter(result));
   }
 
-  @common.UseInterceptors(nestMorgan.MorganInterceptor("combined"))
-  @common.UseGuards(
-    defaultAuthGuard.DefaultAuthGuard,
-    nestAccessControl.ACGuard
-  )
-  @common.Get("/:id")
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @nestAccessControl.UseRoles({
     resource: "User",
     action: "read",
     possession: "own",
   })
+  @common.Get("/:id")
   @swagger.ApiOkResponse({ type: User })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
   @swagger.ApiForbiddenResponse({ type: errors.ForbiddenException })
   async findOne(
-    @common.Param() params: UserWhereUniqueInput,
-    @nestAccessControl.UserRoles() userRoles: string[]
+    @common.Param() params: UserWhereUniqueInput
   ): Promise<User | null> {
-    const permission = this.rolesBuilder.permission({
-      role: userRoles,
-      action: "read",
-      possession: "own",
-      resource: "User",
-    });
     const result = await this.service.findOne({
       where: params,
       select: {
@@ -158,6 +110,7 @@ export class UserControllerBase {
         lastName: true,
         username: true,
         roles: true,
+        matan: true,
       },
     });
     if (result === null) {
@@ -165,47 +118,23 @@ export class UserControllerBase {
         `No resource was found for ${JSON.stringify(params)}`
       );
     }
-    return permission.filter(result);
+    return result;
   }
 
-  @common.UseInterceptors(nestMorgan.MorganInterceptor("combined"))
-  @common.UseGuards(
-    defaultAuthGuard.DefaultAuthGuard,
-    nestAccessControl.ACGuard
-  )
-  @common.Patch("/:id")
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @nestAccessControl.UseRoles({
     resource: "User",
     action: "update",
     possession: "any",
   })
+  @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: User })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
   @swagger.ApiForbiddenResponse({ type: errors.ForbiddenException })
   async update(
     @common.Param() params: UserWhereUniqueInput,
-    @common.Body()
-    data: UserUpdateInput,
-    @nestAccessControl.UserRoles() userRoles: string[]
+    @common.Body() data: UserUpdateInput
   ): Promise<User | null> {
-    const permission = this.rolesBuilder.permission({
-      role: userRoles,
-      action: "update",
-      possession: "any",
-      resource: "User",
-    });
-    const invalidAttributes = abacUtil.getInvalidAttributes(permission, data);
-    if (invalidAttributes.length) {
-      const properties = invalidAttributes
-        .map((attribute: string) => JSON.stringify(attribute))
-        .join(", ");
-      const roles = userRoles
-        .map((role: string) => JSON.stringify(role))
-        .join(",");
-      throw new errors.ForbiddenException(
-        `providing the properties: ${properties} on ${"User"} update is forbidden for roles: ${roles}`
-      );
-    }
     try {
       return await this.service.update({
         where: params,
@@ -218,6 +147,7 @@ export class UserControllerBase {
           lastName: true,
           username: true,
           roles: true,
+          matan: true,
         },
       });
     } catch (error) {
@@ -230,17 +160,12 @@ export class UserControllerBase {
     }
   }
 
-  @common.UseInterceptors(nestMorgan.MorganInterceptor("combined"))
-  @common.UseGuards(
-    defaultAuthGuard.DefaultAuthGuard,
-    nestAccessControl.ACGuard
-  )
-  @common.Delete("/:id")
   @nestAccessControl.UseRoles({
     resource: "User",
     action: "delete",
     possession: "any",
   })
+  @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: User })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
   @swagger.ApiForbiddenResponse({ type: errors.ForbiddenException })
@@ -258,6 +183,7 @@ export class UserControllerBase {
           lastName: true,
           username: true,
           roles: true,
+          matan: true,
         },
       });
     } catch (error) {
