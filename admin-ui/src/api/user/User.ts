@@ -6,4 +6,5 @@ export type User = {
   lastName: string | null;
   username: string;
   roles: Array<string>;
+  matan: string | null;
 };
