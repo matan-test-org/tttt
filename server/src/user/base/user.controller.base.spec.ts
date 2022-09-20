@@ -19,6 +19,7 @@ const CREATE_INPUT = {
   username: "exampleUsername",
   password: "examplePassword",
   roles: ["exampleRoles"],
+  matan: "exampleMatan",
 };
 const CREATE_RESULT = {
   id: "exampleId",
@@ -29,6 +30,7 @@ const CREATE_RESULT = {
   username: "exampleUsername",
   password: "examplePassword",
   roles: ["exampleRoles"],
+  matan: "exampleMatan",
 };
 const FIND_MANY_RESULT = [
   {
@@ -40,6 +42,7 @@ const FIND_MANY_RESULT = [
     username: "exampleUsername",
     password: "examplePassword",
     roles: ["exampleRoles"],
+    matan: "exampleMatan",
   },
 ];
 const FIND_ONE_RESULT = {
@@ -51,6 +54,7 @@ const FIND_ONE_RESULT = {
   username: "exampleUsername",
   password: "examplePassword",
   roles: ["exampleRoles"],
+  matan: "exampleMatan",
 };
 
 const service = {
